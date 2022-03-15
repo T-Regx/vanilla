@@ -7,7 +7,7 @@ namespace Composer\Autoload;
 class ComposerStaticInitf76b0a2b3818b7241a2774c0d3480a23
 {
     public static $files = array (
-        '8b3f8a3ae8e6735c5c18ca84e978b632' => __DIR__ . '/..' . '/rawr/t-regx/helper/helper.php',
+        '8b3f8a3ae8e6735c5c18ca84e978b632' => __DIR__ . '/..',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -21,16 +21,16 @@ class ComposerStaticInitf76b0a2b3818b7241a2774c0d3480a23
     public static $prefixDirsPsr4 = array (
         'TRegx\\' => 
         array (
-            0 => __DIR__ . '/..' . '/rawr/t-regx/src',
+            0 => __DIR__ . '/..',
         ),
         'T-Regx\\Fiddle\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/src',
+            0 => __DIR__ . '/../vanilla' . '/src',
         ),
     );
 
     public static $classMap = array (
-        'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'Composer\\InstalledVersions' => __DIR__ . '/..',
     );
 
     public static function getInitializer(ClassLoader $loader)
