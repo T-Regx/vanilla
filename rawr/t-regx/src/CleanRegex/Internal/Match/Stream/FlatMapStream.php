@@ -3,7 +3,6 @@ namespace TRegx\CleanRegex\Internal\Match\Stream;
 
 use TRegx\CleanRegex\Internal\Match\FlatFunction;
 use TRegx\CleanRegex\Internal\Match\FlatMap\FlatMapStrategy;
-use TRegx\CleanRegex\Internal\Nested;
 
 class FlatMapStream implements Upstream
 {
@@ -23,35 +22,37 @@ class FlatMapStream implements Upstream
 
     public function all(): array
     {
-        return $this->strategy->flatten(new Nested(\array_map([$this->function, 'apply'], $this->upstream->all())));
+        return $this->strategy->flatten($this->function->map($this->upstream->all()));
     }
 
-    public function first()
+    public function first(): array
     {
-        $flatMap = $this->flatMapTryFirstOrAll();
-        if (!empty($flatMap)) {
-            return \reset($flatMap);
-        }
-        throw new EmptyStreamException();
+        [$key, $value] = $this->upstream->first();
+        return $this->firstArrayEntry($this->firstArrayOrRemainingArraysFlat($value));
     }
 
-    public function firstKey()
+    private function firstArrayOrRemainingArraysFlat($value): array
     {
-        $flatMap = $this->flatMapTryFirstOrAll();
-        \reset($flatMap);
-        $firstKey = \key($flatMap);
-        if ($firstKey !== null) {
-            return $firstKey;
+        $firstArray = $this->function->apply($value);
+        if (empty($firstArray)) {
+            return $this->remainingArraysFlat();
         }
-        throw new EmptyStreamException();
+        return $firstArray;
     }
 
-    private function flatMapTryFirstOrAll(): array
+    private function firstArrayEntry(array $array): array
     {
-        $mapped = $this->function->apply($this->upstream->first());
-        if (empty($mapped)) {
-            return $this->all();
+        $value = \reset($array);
+        $key = \key($array);
+        return [$key, $value];
+    }
+
+    private function remainingArraysFlat(): array
+    {
+        $remainingFlat = $this->all();
+        if (empty($remainingFlat)) {
+            throw new EmptyStreamException();
         }
-        return $mapped;
+        return $remainingFlat;
     }
 }

@@ -23,14 +23,6 @@ class StreamTerminal
         }
     }
 
-    public function only(int $limit): array
-    {
-        if ($limit < 0) {
-            throw new \InvalidArgumentException("Negative limit: $limit");
-        }
-        return \array_slice($this->all(), 0, $limit);
-    }
-
     public function forEach(callable $consumer): void
     {
         foreach ($this->all() as $key => $value) {
@@ -50,5 +42,13 @@ class StreamTerminal
         } catch (UnmatchedStreamException $exception) {
             return new \EmptyIterator();
         }
+    }
+
+    public function reduce(callable $reducer, $accumulator)
+    {
+        foreach ($this->all() as $detail) {
+            $accumulator = $reducer($accumulator, $detail);
+        }
+        return $accumulator;
     }
 }

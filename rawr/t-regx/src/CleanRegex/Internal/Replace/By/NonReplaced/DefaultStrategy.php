@@ -1,13 +1,12 @@
 <?php
 namespace TRegx\CleanRegex\Internal\Replace\By\NonReplaced;
 
-use TRegx\CleanRegex\Internal\Message\NotMatchedMessage;
-use TRegx\CleanRegex\Internal\Subject;
+use TRegx\CleanRegex\Internal\Message\Message;
 use TRegx\CleanRegex\Match\Details\Detail;
 
 class DefaultStrategy implements LazySubjectRs, MatchRs
 {
-    public function substitute(Subject $subject): ?string
+    public function substitute(): ?string
     {
         return null;
     }
@@ -17,7 +16,7 @@ class DefaultStrategy implements LazySubjectRs, MatchRs
         return null;
     }
 
-    public function useExceptionMessage(NotMatchedMessage $message): void
+    public function useExceptionMessage(Message $message): void
     {
     }
 }

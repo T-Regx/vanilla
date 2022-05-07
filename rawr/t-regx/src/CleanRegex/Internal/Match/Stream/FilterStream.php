@@ -1,16 +1,13 @@
 <?php
 namespace TRegx\CleanRegex\Internal\Match\Stream;
 
-use TRegx\CleanRegex\Internal\Match\MethodPredicate;
 use TRegx\CleanRegex\Internal\Predicate;
 
 class FilterStream implements Upstream
 {
-    use ListStream;
-
     /** @var Upstream */
     private $upstream;
-    /** @var MethodPredicate */
+    /** @var Predicate */
     private $predicate;
 
     public function __construct(Upstream $upstream, Predicate $predicate)
@@ -19,20 +16,25 @@ class FilterStream implements Upstream
         $this->predicate = $predicate;
     }
 
-    protected function entries(): array
+    public function all(): array
     {
         return \array_filter($this->upstream->all(), [$this->predicate, 'test']);
     }
 
-    protected function firstValue()
+    public function first(): array
     {
-        $first = $this->upstream->first();
-        if ($this->predicate->test($first)) {
-            return $first;
+        [$firstKey, $firstValue] = $this->upstream->first();
+        if ($this->predicate->test($firstValue)) {
+            return [$firstKey, $firstValue];
         }
-        foreach ($this->shifted() as $item) {
-            if ($this->predicate->test($item)) {
-                return $item;
+        return $this->remainingEntries();
+    }
+
+    private function remainingEntries(): array
+    {
+        foreach ($this->shifted() as $key => $value) {
+            if ($this->predicate->test($value)) {
+                return [$key, $value];
             }
         }
         throw new EmptyStreamException();
@@ -40,6 +42,6 @@ class FilterStream implements Upstream
 
     private function shifted(): array
     {
-        return \array_slice($this->upstream->all(), 1);
+        return \array_slice($this->upstream->all(), 1, null, true);
     }
 }

@@ -1,11 +1,11 @@
 <?php
 namespace TRegx\CleanRegex\Match\Details\Group;
 
-use TRegx\CleanRegex\Exception\IntegerFormatException;
-use TRegx\CleanRegex\Exception\IntegerOverflowException;
 use TRegx\CleanRegex\Internal\Match\Details\Group\GroupDetails;
 use TRegx\CleanRegex\Internal\Match\Details\Group\GroupEntry;
 use TRegx\CleanRegex\Internal\Match\Details\Group\SubstitutedGroup;
+use TRegx\CleanRegex\Internal\Match\Numeral\GroupExceptions;
+use TRegx\CleanRegex\Internal\Match\Numeral\IntegerBase;
 use TRegx\CleanRegex\Internal\Match\PresentOptional;
 use TRegx\CleanRegex\Internal\Numeral\Base;
 use TRegx\CleanRegex\Internal\Numeral\NumeralFormatException;
@@ -38,29 +38,13 @@ class MatchedGroup implements Group
         return $this->groupEntry->text();
     }
 
-    public function textLength(): int
+    public function toInt(int $base = 10): int
     {
-        return \mb_strlen($this->groupEntry->text());
+        $integerBase = new IntegerBase(new Base($base), new GroupExceptions($this->details->group()));
+        return $integerBase->integer($this->groupEntry->text());
     }
 
-    public function textByteLength(): int
-    {
-        return \strlen($this->groupEntry->text());
-    }
-
-    public function toInt(int $base = null): int
-    {
-        $number = new StringNumeral($this->groupEntry->text());
-        try {
-            return $number->asInt(new Base($base));
-        } catch (NumeralFormatException $exception) {
-            throw IntegerFormatException::forGroup($this->details->group(), $this->groupEntry->text(), new Base($base));
-        } catch (NumeralOverflowException $exception) {
-            throw IntegerOverflowException::forGroup($this->details->group(), $this->groupEntry->text(), new Base($base));
-        }
-    }
-
-    public function isInt(int $base = null): bool
+    public function isInt(int $base = 10): bool
     {
         $number = new StringNumeral($this->groupEntry->text());
         try {
@@ -81,14 +65,19 @@ class MatchedGroup implements Group
         return $this->groupEntry->text() === $expected;
     }
 
-    public function index(): int
+    public function or(string $substitute): string
     {
-        return $this->details->index();
+        return $this->text();
     }
 
     public function name(): ?string
     {
         return $this->details->name();
+    }
+
+    public function index(): int
+    {
+        return $this->details->index();
     }
 
     /**
@@ -109,6 +98,11 @@ class MatchedGroup implements Group
         return $this->groupEntry->tail();
     }
 
+    public function length(): int
+    {
+        return \mb_strlen($this->groupEntry->text(), 'UTF-8');
+    }
+
     public function byteOffset(): int
     {
         return $this->groupEntry->byteOffset();
@@ -119,6 +113,21 @@ class MatchedGroup implements Group
         return $this->groupEntry->byteTail();
     }
 
+    public function byteLength(): int
+    {
+        return \strlen($this->groupEntry->text());
+    }
+
+    public function subject(): string
+    {
+        return $this->subject;
+    }
+
+    public function all(): array
+    {
+        return $this->details->all();
+    }
+
     /**
      * @deprecated
      */
@@ -127,31 +136,9 @@ class MatchedGroup implements Group
         return $this->substitutedGroup->with($replacement);
     }
 
-    public function subject(): string
-    {
-        return $this->subject->getSubject();
-    }
-
-    public function all(): array
-    {
-        return $this->details->all();
-    }
-
-    public function orThrow(string $exceptionClassName = null): string
-    {
-        return $this->text();
-    }
-
-    public function orReturn($substitute): string
-    {
-        return $this->text();
-    }
-
-    public function orElse(callable $substituteProducer): string
-    {
-        return $this->text();
-    }
-
+    /**
+     * @deprecated
+     */
     public function map(callable $mapper): Optional
     {
         return new PresentOptional($mapper($this));

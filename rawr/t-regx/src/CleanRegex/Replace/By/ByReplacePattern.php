@@ -1,8 +1,10 @@
 <?php
 namespace TRegx\CleanRegex\Replace\By;
 
+use TRegx\CleanRegex\Internal\Definition;
 use TRegx\CleanRegex\Internal\GroupKey\GroupKey;
 use TRegx\CleanRegex\Internal\GroupKey\WholeMatch;
+use TRegx\CleanRegex\Internal\Model\GroupAware;
 use TRegx\CleanRegex\Internal\Replace\By\GroupFallbackReplacer;
 use TRegx\CleanRegex\Internal\Replace\By\GroupMapper\DictionaryMapper;
 use TRegx\CleanRegex\Internal\Replace\By\GroupMapper\SubstituteFallbackMapper;
@@ -10,9 +12,11 @@ use TRegx\CleanRegex\Internal\Replace\By\NonReplaced\DefaultStrategy;
 use TRegx\CleanRegex\Internal\Replace\By\NonReplaced\LazySubjectRs;
 use TRegx\CleanRegex\Internal\Replace\By\NonReplaced\ThrowMatchRs;
 use TRegx\CleanRegex\Internal\Replace\By\PerformanceEmptyGroupReplace;
+use TRegx\CleanRegex\Internal\Replace\Counting\CountingStrategy;
 use TRegx\CleanRegex\Internal\Replace\Wrapper;
 use TRegx\CleanRegex\Internal\Replace\WrappingMapper;
 use TRegx\CleanRegex\Internal\Subject;
+use TRegx\CleanRegex\Replace\Callback\GroupAwareSubstitute;
 use TRegx\CleanRegex\Replace\Callback\ReplacePatternCallbackInvoker;
 
 class ByReplacePattern
@@ -25,35 +29,56 @@ class ByReplacePattern
     private $subject;
     /** @var PerformanceEmptyGroupReplace */
     private $performanceReplace;
-    /** @var ReplacePatternCallbackInvoker */
-    private $replaceCallbackInvoker;
+    /** @var Definition */
+    private $definition;
+    /** @var int */
+    private $limit;
+    /** @var CountingStrategy */
+    private $countingStrategy;
+    /** @var GroupAware */
+    private $groupAware;
     /** @var Wrapper */
     private $wrapper;
 
-    public function __construct(GroupFallbackReplacer         $fallbackReplacer,
-                                LazySubjectRs                 $substitute,
-                                PerformanceEmptyGroupReplace  $performanceReplace,
-                                ReplacePatternCallbackInvoker $replaceCallbackInvoker,
-                                Subject                       $subject,
-                                Wrapper                       $middlewareMapper)
+    public function __construct(GroupFallbackReplacer        $fallbackReplacer,
+                                LazySubjectRs                $substitute,
+                                PerformanceEmptyGroupReplace $performanceReplace,
+                                Definition                   $definition,
+                                int                          $limit,
+                                CountingStrategy             $countingStrategy,
+                                GroupAware                   $groupAware,
+                                Subject                      $subject,
+                                Wrapper                      $middlewareMapper)
     {
         $this->fallbackReplacer = $fallbackReplacer;
         $this->substitute = $substitute;
         $this->subject = $subject;
         $this->performanceReplace = $performanceReplace;
-        $this->replaceCallbackInvoker = $replaceCallbackInvoker;
+        $this->definition = $definition;
+        $this->limit = $limit;
+        $this->countingStrategy = $countingStrategy;
+        $this->groupAware = $groupAware;
         $this->wrapper = $middlewareMapper;
     }
 
     public function group($nameOrIndex): ByGroupReplacePattern
     {
+        return $this->replaceGroup(GroupKey::of($nameOrIndex));
+    }
+
+    private function replaceGroup(GroupKey $group): ByGroupReplacePattern
+    {
         return new ByGroupReplacePattern(
             $this->fallbackReplacer,
             $this->performanceReplace,
-            $this->replaceCallbackInvoker,
-            GroupKey::of($nameOrIndex),
-            $this->subject,
-            $this->wrapper);
+            new ReplacePatternCallbackInvoker($this->definition,
+                $this->subject,
+                $this->limit,
+                $this->countingStrategy,
+                new GroupAwareSubstitute($this->substitute, $group, $this->groupAware)),
+            $group,
+            $this->wrapper,
+            $this->groupAware);
     }
 
     public function map(array $occurrencesAndReplacements): string
@@ -72,8 +97,7 @@ class ByReplacePattern
             new WholeMatch(),
             new SubstituteFallbackMapper(
                 new WrappingMapper(new DictionaryMapper($map), $this->wrapper),
-                $substitute,
-                $this->subject),
+                $substitute),
             new ThrowMatchRs()); // ThrowMatchRs, because impossible for group 0 not to be matched
     }
 }

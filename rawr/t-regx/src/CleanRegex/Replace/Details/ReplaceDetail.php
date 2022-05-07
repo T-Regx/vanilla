@@ -12,12 +12,15 @@ class ReplaceDetail implements Detail
 {
     /** @var Detail */
     private $detail;
+    /** @var int */
+    private $limit;
     /** @var Modification */
     private $modification;
 
-    public function __construct(Detail $detail, Modification $modification)
+    public function __construct(Detail $detail, int $limit, Modification $modification)
     {
         $this->detail = $detail;
+        $this->limit = $limit;
         $this->modification = $modification;
     }
 
@@ -87,22 +90,22 @@ class ReplaceDetail implements Detail
         return $this->detail->text();
     }
 
-    public function textLength(): int
+    public function length(): int
     {
-        return $this->detail->textLength();
+        return $this->detail->length();
     }
 
-    public function textByteLength(): int
+    public function byteLength(): int
     {
-        return $this->detail->textByteLength();
+        return $this->detail->byteLength();
     }
 
-    public function toInt(int $base = null): int
+    public function toInt(int $base = 10): int
     {
         return $this->detail->toInt($base);
     }
 
-    public function isInt(int $base = null): bool
+    public function isInt(int $base = 10): bool
     {
         return $this->detail->isInt($base);
     }
@@ -114,7 +117,7 @@ class ReplaceDetail implements Detail
 
     public function limit(): int
     {
-        return $this->detail->limit();
+        return $this->limit;
     }
 
     public function groups(): IndexedGroups
@@ -162,16 +165,6 @@ class ReplaceDetail implements Detail
     public function byteTail(): int
     {
         return $this->detail->byteTail();
-    }
-
-    public function setUserData($userData): void
-    {
-        $this->detail->setUserData($userData);
-    }
-
-    public function getUserData()
-    {
-        return $this->detail->getUserData();
     }
 
     public function __toString(): string

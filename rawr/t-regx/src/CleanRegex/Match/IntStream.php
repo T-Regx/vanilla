@@ -11,43 +11,36 @@ use TRegx\CleanRegex\Internal\Match\Stream\FilterStream;
 use TRegx\CleanRegex\Internal\Match\Stream\FlatMapStream;
 use TRegx\CleanRegex\Internal\Match\Stream\GroupByCallbackStream;
 use TRegx\CleanRegex\Internal\Match\Stream\KeyStream;
+use TRegx\CleanRegex\Internal\Match\Stream\LimitStream;
 use TRegx\CleanRegex\Internal\Match\Stream\MapStream;
 use TRegx\CleanRegex\Internal\Match\Stream\RejectedOptional;
+use TRegx\CleanRegex\Internal\Match\Stream\SkipStream;
 use TRegx\CleanRegex\Internal\Match\Stream\StreamRejectedException;
 use TRegx\CleanRegex\Internal\Match\Stream\UniqueStream;
 use TRegx\CleanRegex\Internal\Match\Stream\Upstream;
-use TRegx\CleanRegex\Internal\Match\Stream\ValuesStream;
+use TRegx\CleanRegex\Internal\Match\Stream\ValueStream;
 use TRegx\CleanRegex\Internal\Match\StreamTerminal;
 use TRegx\CleanRegex\Internal\Predicate;
-use TRegx\CleanRegex\Internal\Subject;
 
 class IntStream implements \Countable, \IteratorAggregate
 {
     /** @var StreamTerminal */
     private $terminal;
     /** @var Upstream */
-    protected $upstream;
+    private $upstream;
     /** @var NthIntStreamElement */
-    protected $nth;
-    /** @var Subject */
-    private $subject;
+    private $nth;
 
-    public function __construct(Upstream $upstream, NthIntStreamElement $nth, Subject $subject)
+    public function __construct(Upstream $upstream, NthIntStreamElement $nth)
     {
         $this->terminal = new StreamTerminal($upstream);
         $this->upstream = $upstream;
         $this->nth = $nth;
-        $this->subject = $subject;
     }
 
     public function all(): array
     {
         return $this->terminal->all();
-    }
-
-    public function only(int $limit): array
-    {
-        return $this->terminal->only($limit);
     }
 
     public function forEach(callable $consumer): void
@@ -81,10 +74,11 @@ class IntStream implements \Countable, \IteratorAggregate
     private function firstOptional(): Optional
     {
         try {
-            return new PresentOptional($this->upstream->first());
+            [$key, $value] = $this->upstream->first();
         } catch (StreamRejectedException $exception) {
-            return new RejectedOptional($exception->rejection());
+            return new RejectedOptional($exception->throwable());
         }
+        return new PresentOptional($value);
     }
 
     public function nth(int $index): int
@@ -98,11 +92,6 @@ class IntStream implements \Countable, \IteratorAggregate
             throw new \InvalidArgumentException("Negative index: $index");
         }
         return $this->nth->optional($index);
-    }
-
-    public function asInt(): IntStream
-    {
-        return $this;
     }
 
     public function map(callable $mapper): Stream
@@ -132,12 +121,17 @@ class IntStream implements \Countable, \IteratorAggregate
 
     public function values(): Stream
     {
-        return $this->next(new ValuesStream($this->upstream));
+        return $this->next(new ValueStream($this->upstream));
     }
 
     public function keys(): Stream
     {
         return $this->next(new KeyStream($this->upstream));
+    }
+
+    public function asInt(): IntStream
+    {
+        return $this;
     }
 
     public function groupByCallback(callable $groupMapper): Stream
@@ -147,11 +141,35 @@ class IntStream implements \Countable, \IteratorAggregate
 
     private function next(Upstream $upstream): Stream
     {
-        return new Stream($upstream, $this->subject);
+        return new Stream($upstream);
+    }
+
+    public function reduce(callable $reducer, $accumulator)
+    {
+        foreach ($this as $detail) {
+            $accumulator = $reducer($accumulator, $detail);
+        }
+        return $accumulator;
+    }
+
+    public function limit(int $limit): Stream
+    {
+        if ($limit < 0) {
+            throw new \InvalidArgumentException("Negative offset: $limit");
+        }
+        return $this->next(new LimitStream($this->upstream, $limit));
+    }
+
+    public function skip(int $offset): Stream
+    {
+        if ($offset < 0) {
+            throw new \InvalidArgumentException("Negative offset: $offset");
+        }
+        return $this->next(new SkipStream($this->upstream, $offset));
     }
 
     public function stream(): Stream
     {
-        return new Stream($this->upstream, $this->subject);
+        return new Stream($this->upstream);
     }
 }

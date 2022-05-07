@@ -4,7 +4,7 @@ namespace TRegx\CleanRegex\Internal\Match;
 use TRegx\CleanRegex\Exception\InvalidReturnValueException;
 use TRegx\CleanRegex\Internal\Type\ValueType;
 use TRegx\CleanRegex\Match\Details\Detail;
-use TRegx\CleanRegex\Match\Details\Group\Group;
+use TRegx\CleanRegex\Match\Details\Group\CapturingGroup;
 
 class GroupByFunction
 {
@@ -19,19 +19,19 @@ class GroupByFunction
         $this->function = $function;
     }
 
-    /**
-     * @param $argument
-     * @return int|string
-     */
-    public function apply($argument)
+    public function apply($argument): string
     {
-        $newKey = ($this->function)($argument);
-        if ($newKey instanceof Detail || $newKey instanceof Group) {
-            return $newKey->text();
+        return $this->groupKey(($this->function)($argument));
+    }
+
+    private function groupKey($key): string
+    {
+        if ($key instanceof Detail || $key instanceof CapturingGroup) {
+            return $key->text();
         }
-        if (\is_int($newKey) || \is_string($newKey)) {
-            return $newKey;
+        if (\is_int($key) || \is_string($key)) {
+            return $key;
         }
-        throw new InvalidReturnValueException($this->methodName, 'int|string', new ValueType($newKey));
+        throw new InvalidReturnValueException($this->methodName, 'int|string', new ValueType($key));
     }
 }

@@ -12,16 +12,19 @@ class NotMatched implements Structure
     private $groupAware;
     /** @var Subject */
     private $subject;
+    /** @var GroupNames */
+    private $groupNames;
 
     public function __construct(GroupAware $groupAware, Subject $subject)
     {
         $this->groupAware = $groupAware;
         $this->subject = $subject;
+        $this->groupNames = new GroupNames($groupAware);
     }
 
     public function subject(): string
     {
-        return $this->subject->getSubject();
+        return $this->subject;
     }
 
     /**
@@ -29,7 +32,7 @@ class NotMatched implements Structure
      */
     public function groupNames(): array
     {
-        return (new GroupNames($this->groupAware))->groupNames();
+        return $this->groupNames->groupNames();
     }
 
     public function groupsCount(): int
@@ -44,6 +47,6 @@ class NotMatched implements Structure
      */
     public function hasGroup($nameOrIndex): bool
     {
-        return $this->groupAware->hasGroup(GroupKey::of($nameOrIndex)->nameOrIndex());
+        return $this->groupAware->hasGroup(GroupKey::of($nameOrIndex));
     }
 }

@@ -3,8 +3,9 @@ namespace TRegx\CleanRegex\Replace\Callback;
 
 use TRegx\CleanRegex\Internal\Definition;
 use TRegx\CleanRegex\Internal\Model\LightweightGroupAware;
-use TRegx\CleanRegex\Internal\Model\Match\RawMatchesOffset;
-use TRegx\CleanRegex\Internal\Replace\By\NonReplaced\SubjectRs;
+use TRegx\CleanRegex\Internal\Pcre\Legacy\ApiBase;
+use TRegx\CleanRegex\Internal\Pcre\Legacy\LazyMatchAllFactory;
+use TRegx\CleanRegex\Internal\Pcre\Legacy\MatchAllFactory;
 use TRegx\CleanRegex\Internal\Replace\Counting\CountingStrategy;
 use TRegx\CleanRegex\Internal\Subject;
 use TRegx\SafeRegex\preg;
@@ -17,18 +18,25 @@ class ReplacePatternCallbackInvoker
     private $subject;
     /** @var int */
     private $limit;
-    /** @var SubjectRs */
-    private $substitute;
     /** @var CountingStrategy */
     private $countingStrategy;
+    /** @var MatchAllFactory */
+    private $allFactory;
+    /** @var GroupSubstitute */
+    private $substitute;
 
-    public function __construct(Definition $definition, Subject $subject, int $limit, SubjectRs $substitute, CountingStrategy $countingStrategy)
+    public function __construct(Definition       $definition,
+                                Subject          $subject,
+                                int              $limit,
+                                CountingStrategy $countingStrategy,
+                                GroupSubstitute  $groupSubstitute)
     {
         $this->definition = $definition;
         $this->subject = $subject;
         $this->limit = $limit;
-        $this->substitute = $substitute;
         $this->countingStrategy = $countingStrategy;
+        $this->allFactory = new LazyMatchAllFactory(new ApiBase($definition, $subject));
+        $this->substitute = $groupSubstitute;
     }
 
     public function invoke(callable $callback, ReplaceCallbackArgumentStrategy $strategy): string
@@ -36,7 +44,7 @@ class ReplacePatternCallbackInvoker
         $result = $this->pregReplaceCallback($callback, $replaced, $strategy);
         $this->countingStrategy->count($replaced, new LightweightGroupAware($this->definition));
         if ($replaced === 0) {
-            return $this->substitute->substitute($this->subject) ?? $result;
+            return $this->substitute->substitute($result);
         }
         return $result;
     }
@@ -45,7 +53,7 @@ class ReplacePatternCallbackInvoker
     {
         return preg::replace_callback($this->definition->pattern,
             $this->getObjectCallback($callback, $strategy),
-            $this->subject->getSubject(),
+            $this->subject,
             $this->limit,
             $replaced);
     }
@@ -61,13 +69,7 @@ class ReplacePatternCallbackInvoker
 
     private function createObjectCallback(callable $callback, ReplaceCallbackArgumentStrategy $strategy): callable
     {
-        $object = new ReplaceCallbackObject($callback, $this->subject, $this->analyzePattern(), $this->limit, $strategy);
+        $object = new ReplaceCallbackObject($callback, $this->subject, $this->allFactory, $this->limit, $strategy);
         return $object->getCallback();
-    }
-
-    private function analyzePattern(): RawMatchesOffset
-    {
-        preg::match_all($this->definition->pattern, $this->subject->getSubject(), $matches, \PREG_OFFSET_CAPTURE);
-        return new RawMatchesOffset($matches);
     }
 }

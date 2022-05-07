@@ -1,23 +1,22 @@
 <?php
 namespace TRegx\CleanRegex\Match\Details\Group;
 
+use TRegx\CleanRegex\Match\Details\Intable;
 use TRegx\CleanRegex\Match\Optional;
 
-interface CapturingGroup extends Optional
+interface CapturingGroup extends Intable
 {
     public function text(): string;
 
-    public function textLength(): int;
+    public function toInt(int $base = 10): int;
 
-    public function textByteLength(): int;
-
-    public function toInt(int $base = null): int;
-
-    public function isInt(int $base = null): bool;
+    public function isInt(int $base = 10): bool;
 
     public function matched(): bool;
 
     public function equals(string $expected): bool;
+
+    public function or(string $substitute): string;
 
     public function name(): ?string;
 
@@ -30,16 +29,25 @@ interface CapturingGroup extends Optional
 
     public function tail(): int;
 
+    public function length(): int;
+
     public function byteOffset(): int;
 
     public function byteTail(): int;
+
+    public function byteLength(): int;
+
+    public function subject(): string;
+
+    public function all(): array;
 
     /**
      * @deprecated
      */
     public function substitute(string $replacement): string;
 
-    public function subject(): string;
-
-    public function all(): array;
+    /**
+     * @deprecated
+     */
+    public function map(callable $mapper): Optional;
 }

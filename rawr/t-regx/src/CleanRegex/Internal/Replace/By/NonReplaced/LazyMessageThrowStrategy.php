@@ -2,20 +2,19 @@
 namespace TRegx\CleanRegex\Internal\Replace\By\NonReplaced;
 
 use TRegx\CleanRegex\Exception\MissingReplacementKeyException;
-use TRegx\CleanRegex\Internal\Message\NotMatchedMessage;
-use TRegx\CleanRegex\Internal\Subject;
+use TRegx\CleanRegex\Internal\Message\Message;
 
 class LazyMessageThrowStrategy implements LazySubjectRs
 {
-    /** @var NotMatchedMessage */
+    /** @var Message */
     private $message = null;
 
-    public function substitute(Subject $subject): ?string
+    public function substitute(): ?string
     {
         throw new MissingReplacementKeyException($this->message->getMessage());
     }
 
-    public function useExceptionMessage(NotMatchedMessage $message): void
+    public function useExceptionMessage(Message $message): void
     {
         $this->message = $message;
     }
